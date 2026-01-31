@@ -1,1 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawMatch - Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 
+    <!-- ────────────────────────────────────────────────
+         REQUIRED: Supabase JavaScript client (v2)
+         This is needed for database + storage operations
+    ──────────────────────────────────────────────── -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #004E89;
+            --primary-orange: #FF6B35;
+            --accent-pink: #F75C7E;
+            --accent-yellow: #FFD23F;
+            --light-cream: #FFF8F0;
+            --soft-gray: #F5F5F5;
+            --dark-text: #2C3E50;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--light-cream);
+            color: var(--dark-text);
+        }
+
+        .admin-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-orange));
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-header h1 {
+            font-family: 'Fraunces', serif;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-header-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .admin-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .admin-btn-primary {
+            background: white;
+            color: var(--primary-orange);
+        }
+
+        .admin-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .admin-content {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--soft-gray);
+            flex-wrap: wrap;
+        }
+
+        .admin-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .admin-tab-btn:hover {
+            color: var(--primary-orange);
+        }
+
+        .admin-tab-btn.active {
+            color: var(--primary-orange);
+            border-bottom-color: var(--primary-orange);
+        }
+
+        .admin-tab-content {
+            display: none;
+        }
+
+        .admin-tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .admin-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-form-group-full {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1.5rem;
+            grid-column: 1 / -1;
+        }
+
+        .admin-form-group label,
+        .admin-form-group-full label {
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .admin-form-group input,
+        .admin-form-group select,
+        .admin-form-group-full input,
+        .admin-form-group-full textarea {
+            padding: 0.8rem 1rem;
+            border: 2px solid var(--soft-gray);
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .admin-form-group input:focus,
+        .admin-form-group select:focus,
+        .admin-form-group-full input:focus,
+        .admin-form-group-full textarea:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+        }
+
+        .admin-submit-btn {
+            background: linear-gradient(135deg, var(--primary-orange), #e55525);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s;
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+
+        .admin-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+        }
+
+        .admin-pet-item {
+            background: white;
+            border: 2px solid var(--soft-gray);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .admin-pet-item:hover {
+            border-color: var(--primary-orange);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .admin-pet-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            gap: 1rem;
+        }
+
+        .admin-pet-emoji {
+            font-size: 2rem;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .admin-pet-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .admin-pet-info h4 {
+            margin: 0;
+            color: var(--primary-blue);
+        }
+
+        .admin-pet-info p {
+            margin: 0.3rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .admin-pet-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .admin-action-btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .edit-btn {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: #003d7a;
+            transform: translateY(-2px);
+        }
+
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .toast {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            background: white;
+            padding: 1.2rem 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            transform: translateX(400px);
+            transition: transform 0.4s ease-out;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            max-width: 350px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-icon {
+            font-size: 2rem;
+        }
+
+        .toast-message {
+            flex: 1;
+        }
+
+        .toast-close {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #999;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-family: 'Fraunces', serif;
+            font-size: 1.8rem;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .image-preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            grid-column: 1 / -1;
+        }
+
+        .image-upload-input {
+            display: none;
+        }
+
+        .image-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 2rem;
+            border: 2px dashed var(--primary-orange);
+            border-radius: 10px;
+            background: rgba(255, 107, 53, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            color: var(--primary-orange);
+        }
+
+        .image-upload-label:hover {
+            background: rgba(255, 107, 53, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .image-preview {
+            width: 200px;
+            height: 200px;
+            border-radius: 15px;
+            object-fit: cover;
+            border: 2px solid var(--soft-gray);
+        }
+
+        .remove-image-btn {
+            padding: 0.6rem 1.2rem;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .remove-image-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .form-note {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-blue);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            color: #1565c0;
+        }
+
+        #cancelEditBtn {
+            margin-top: 1rem;
+            background: var(--soft-gray);
+            color: var(--dark-text);
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+
+        #cancelEditBtn:hover {
+            background: #ddd;
+        }
+
+        #loginForm {
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        #loginForm h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary-blue);
+        }
+
+        #adminMainContent {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .admin-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .admin-header-actions {
+                flex-direction: column;
+            }
+
+            .admin-btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .admin-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-pet-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .admin-pet-actions {
+                width: 100%;
+                margin-top: 1rem;
+            }
+
+            .admin-action-btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1>🐾 PawMatch Admin Panel</h1>
+            <p style="font-size: 1rem; opacity: 0.9;">Manage and add new pets to your Supabase database</p>
+            <div class="admin-header-actions">
+                <a href="index.html" class="admin-btn admin-btn-primary">← Back to PawMatch</a>
+            </div>
+        </div>
+
+        <!-- Login Form (shown first) -->
+        <form id="loginForm" onsubmit="loginAdmin(event)">
+            <h2>Admin Login</h2>
+            <div class="admin-form-group">
+                <label for="adminEmail">Email *</label>
+                <input type="email" id="adminEmail" placeholder="admin@example.com" required>
+            </div>
+            <div class="admin-form-group">
+                <label for="adminPassword">Password *</label>
+                <input type="password" id="adminPassword" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="admin-submit-btn">Login</button>
+        </form>
+
+        <!-- Main Content (hidden until login) -->
+        <div id="adminMainContent" class="admin-content">
+            <div class="admin-tabs">
+                <button class="admin-tab-btn active" onclick="switchTab(event, 'add')">➕ Add New Pet</button>
+                <button class="admin-tab-btn" onclick="switchTab(event, 'manage')">📋 Manage Pets (<span id="petCount">0</span>)</button>
+            </div>
+
+            <!-- Add Pet Tab -->
+            <div class="admin-tab-content active" id="addTab">
+                <div class="form-note">
+                    <strong>💡 Tip:</strong> Fields marked with * are required. Fill out all information to create a complete pet profile.
+                </div>
+                
+                <form id="addPetForm" onsubmit="event.preventDefault(); if(editingPetId) updatePet(); else addNewPet();">
+                    <div class="admin-form-grid">
+                        <div class="image-preview-container">
+                            <label for="petImage" class="image-upload-label" id="imageUploadLabel">
+                                📷 Click to upload pet image
+                            </label>
+                            <input type="file" id="petImage" class="image-upload-input" accept="image/*" onchange="previewImage(event)">
+                            <img id="imagePreview" class="image-preview" style="display: none;">
+                            <button type="button" id="removeImageBtn" class="remove-image-btn" style="display: none;" onclick="removeImage()">Remove Image</button>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petName">Pet Name *</label>
+                            <input type="text" id="petName" placeholder="e.g., Max" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petType">Type *</label>
+                            <select id="petType" required>
+                                <option value="">Select Type</option>
+                                <option value="Dog">Dog</option>
+                                <option value="Cat">Cat</option>
+                                <option value="Rabbit">Rabbit</option>
+                                <option value="Bird">Bird</option>
+                            </select>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petBreed">Breed *</label>
+                            <input type="text" id="petBreed" placeholder="e.g., Golden Retriever Mix" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petAge">Age *</label>
+                            <input type="text" id="petAge" placeholder="e.g., 2 years old" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petAgeCategory">Age Category *</label>
+                            <select id="petAgeCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="puppy">Puppy/Kitten</option>
+                                <option value="young">Young (0-2 years)</option>
+                                <option value="adult">Adult (3-7 years)</option>
+                                <option value="senior">Senior (8+ years)</option>
+                            </select>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petGender">Gender *</label>
+                            <select id="petGender" required>
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petSize">Size *</label>
+                            <select id="petSize" required>
+                                <option value="">Select Size</option>
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petLocation">Location *</label>
+                            <input type="text" id="petLocation" placeholder="e.g., Lagos, NG" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petEmoji">Emoji *</label>
+                            <input type="text" id="petEmoji" placeholder="e.g., 🐕" maxlength="2" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petBadge">Badge (Optional)</label>
+                            <input type="text" id="petBadge" placeholder="e.g., New Arrival, Urgent, Puppy">
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petGradient">Gradient Background *</label>
+                            <input type="text" id="petGradient" placeholder="e.g., linear-gradient(135deg, #FFD6E8, #C9E4FF)" value="linear-gradient(135deg, #FFD6E8, #C9E4FF)" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petSizeDetail">Size Detail *</label>
+                            <input type="text" id="petSizeDetail" placeholder="e.g., Large (65 lbs)" required>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label for="petAdoptionFee">Adoption Fee *</label>
+                            <input type="text" id="petAdoptionFee" placeholder="e.g., ₦150,000 or $250" required>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group-full">
+                        <label for="petDescription">Description *</label>
+                        <textarea id="petDescription" placeholder="Describe the pet's personality, story, and characteristics..." rows="4" required></textarea>
+                    </div>
+
+                    <div class="admin-form-group-full">
+                        <label for="petPersonality">Personality Traits * (comma separated)</label>
+                        <input type="text" id="petPersonality" placeholder="e.g., Friendly, Good with kids, Energetic, Loyal" required>
+                    </div>
+
+                    <div class="admin-form-group-full">
+                        <label for="petHealth">Health Status *</label>
+                        <input type="text" id="petHealth" placeholder="e.g., Fully vaccinated, neutered/spayed, microchipped" required>
+                    </div>
+
+                    <div class="admin-form-group-full">
+                        <label for="petGoodWith">Good With *</label>
+                        <input type="text" id="petGoodWith" placeholder="e.g., Children, other dogs, cats, active families" required>
+                    </div>
+
+                    <div class="admin-form-group-full">
+                        <label for="petShelter">Shelter Information *</label>
+                        <input type="text" id="petShelter" placeholder="e.g., Happy Paws Rescue, Lagos" required>
+                    </div>
+
+                    <button type="submit" class="admin-submit-btn" id="submitBtn">➕ Add Pet</button>
+                    <button type="button" id="cancelEditBtn" class="admin-submit-btn" style="display: none; background: var(--soft-gray); color: var(--dark-text);" onclick="resetForm()">Cancel Edit</button>
+                </form>
+            </div>
+
+            <!-- Manage Pets Tab -->
+            <div class="admin-tab-content" id="manageTab">
+                <div id="adminPetsList">
+                    <!-- Pets will be dynamically loaded here by admin-api.js -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-icon" id="toastIcon">✓</div>
+        <div class="toast-message" id="toastMessage"></div>
+        <div class="toast-close" onclick="hideToast()">×</div>
+    </div>
+
+    <!-- Your admin JavaScript file (will handle Supabase CRUD + auth) -->
+    <script src="admin-api.js"></script>
+</body>
+</html>
