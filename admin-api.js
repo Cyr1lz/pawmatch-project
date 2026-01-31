@@ -40,23 +40,30 @@ async function fetchPets() {
 async function loginAdmin(e) {
     e.preventDefault();
 
+    console.log("Step 1: Login button was clicked!");
+
     const emailEl = document.getElementById('adminEmail');
     const passwordEl = document.getElementById('adminPassword');
 
     if (!emailEl || !passwordEl) {
-        showToast('⚠️', 'Login form elements not found');
+        console.log("Step 2: ERROR - Could not find email or password input!");
+        showToast('⚠️', 'Login form fields not found');
         return;
     }
 
     const email = emailEl.value.trim();
     const password = passwordEl.value;
 
+    console.log("Step 3: Email entered:", email);
+    console.log("Step 4: Password length:", password.length);
+
     if (!email || !password) {
+        console.log("Step 5: No email or password entered");
         showToast('⚠️', 'Please enter email and password');
         return;
     }
 
-    console.log('Login attempt:', { email });
+    console.log("Step 6: Trying to login to Supabase...");
 
     try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -65,23 +72,23 @@ async function loginAdmin(e) {
         });
 
         if (error) {
-            console.error('Supabase login error:', error.message);
+            console.log("Step 7: Supabase said NO →", error.message);
             throw error;
         }
 
-        console.log('Login success:', data.user?.email);
+        console.log("Step 8: Login SUCCESS! User:", data.user?.email);
         showToast('✓', 'Login successful!');
 
+        // Hide login, show admin panel
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('adminMainContent').style.display = 'block';
 
         await init();
     } catch (err) {
-        console.error('Login failed:', err.message);
-        showToast('⚠️', err.message.includes('Invalid') ? 'Invalid email or password' : 'Login failed');
+        console.log("Step 9: Login failed →", err.message);
+        showToast('⚠️', err.message.includes('Invalid') ? 'Wrong email or password' : 'Login failed');
     }
 }
-
 // ─── Add new pet with image upload ──────────────────────────────
 async function addNewPet() {
     if (typeof collectFormData !== 'function' || typeof validateForm !== 'function') {
